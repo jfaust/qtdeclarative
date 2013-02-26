@@ -385,6 +385,14 @@ QQuickAnimatedSprite::QQuickAnimatedSprite(QQuickItem *parent) :
             this, SLOT(sizeVertices()));
 }
 
+void QQuickAnimatedSprite::ensureSprite()
+{
+    if (QQmlEngine::contextForObject(m_sprite) != QQmlEngine::contextForObject(this))
+    {
+        QQmlEngine::setContextForObject(m_sprite, QQmlEngine::contextForObject(this));
+    }
+}
+
 bool QQuickAnimatedSprite::isCurrentFrameChangedConnected()
 {
     IS_SIGNAL_CONNECTED(this, QQuickAnimatedSprite, currentFrameChanged, (int));
@@ -484,8 +492,11 @@ void QQuickAnimatedSprite::resume()
 
 void QQuickAnimatedSprite::createEngine()
 {
+    ensureSprite();
+
     if (m_spriteEngine)
         delete m_spriteEngine;
+
     QList<QQuickSprite*> spriteList;
     spriteList << m_sprite;
     m_spriteEngine = new QQuickSpriteEngine(QList<QQuickSprite*>(spriteList), this);

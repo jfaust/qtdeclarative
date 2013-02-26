@@ -200,6 +200,8 @@ public slots:
     void pause();
     void resume();
 
+    void ensureSprite();
+
     void setRunning(bool arg)
     {
         if (m_running != arg) {
@@ -231,6 +233,7 @@ public slots:
     void setSource(QUrl arg)
     {
         if (m_sprite->m_source != arg) {
+            ensureSprite();
             m_sprite->setSource(arg);
             emit sourceChanged(arg);
             reloadImage();
@@ -240,6 +243,7 @@ public slots:
     void setReverse(bool arg)
     {
         if (m_sprite->m_reverse != arg) {
+            ensureSprite();
             m_sprite->setReverse(arg);
             emit reverseChanged(arg);
         }
@@ -248,6 +252,7 @@ public slots:
     void setFrameSync(bool arg)
     {
         if (m_sprite->m_frameSync != arg) {
+            ensureSprite();
             m_sprite->setFrameSync(arg);
             emit frameSyncChanged(arg);
             if (m_running)
@@ -258,6 +263,7 @@ public slots:
     void setFrameCount(int arg)
     {
         if (m_sprite->m_frames != arg) {
+            ensureSprite();
             m_sprite->setFrameCount(arg);
             emit frameCountChanged(arg);
             reloadImage();
@@ -267,6 +273,7 @@ public slots:
     void setFrameHeight(int arg)
     {
         if (m_sprite->m_frameHeight != arg) {
+            ensureSprite();
             m_sprite->setFrameHeight(arg);
             emit frameHeightChanged(arg);
             reloadImage();
@@ -276,6 +283,7 @@ public slots:
     void setFrameWidth(int arg)
     {
         if (m_sprite->m_frameWidth != arg) {
+            ensureSprite();
             m_sprite->setFrameWidth(arg);
             emit frameWidthChanged(arg);
             reloadImage();
@@ -285,6 +293,7 @@ public slots:
     void setFrameX(int arg)
     {
         if (m_sprite->m_frameX != arg) {
+            ensureSprite();
             m_sprite->setFrameX(arg);
             emit frameXChanged(arg);
             reloadImage();
@@ -294,6 +303,7 @@ public slots:
     void setFrameY(int arg)
     {
         if (m_sprite->m_frameY != arg) {
+            ensureSprite();
             m_sprite->setFrameY(arg);
             emit frameYChanged(arg);
             reloadImage();
@@ -303,6 +313,7 @@ public slots:
     void setFrameRate(qreal arg)
     {
         if (m_sprite->m_frameRate != arg) {
+            ensureSprite();
             m_sprite->setFrameRate(arg);
             emit frameRateChanged(arg);
             if (m_running)
@@ -313,6 +324,7 @@ public slots:
     void setFrameDuration(int arg)
     {
         if (m_sprite->m_frameDuration != arg) {
+            ensureSprite();
             m_sprite->setFrameDuration(arg);
             emit frameDurationChanged(arg);
             if (m_running)
