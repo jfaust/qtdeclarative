@@ -335,41 +335,42 @@ bool QQuickLoader::active() const
 void QQuickLoader::setActive(bool newVal)
 {
     Q_D(QQuickLoader);
-    if (d->active != newVal) {
-        d->active = newVal;
-        if (newVal == true) {
-            if (d->loadingFromSource) {
-                loadFromSource();
-            } else {
-                loadFromSourceComponent();
-            }
+    if (d->active == newVal)
+        return;
+
+    d->active = newVal;
+    if (newVal == true) {
+        if (d->loadingFromSource) {
+            loadFromSource();
         } else {
-            // cancel any current incubation
-            if (d->incubator) {
-                d->incubator->clear();
-                delete d->itemContext;
-                d->itemContext = 0;
-            }
-
-            if (d->item) {
-                QQuickItemPrivate *p = QQuickItemPrivate::get(d->item);
-                p->removeItemChangeListener(d, watchedChanges);
-
-                // We can't delete immediately because our item may have triggered
-                // the Loader to load a different item.
-                d->item->setParentItem(0);
-                d->item->setVisible(false);
-                d->item = 0;
-            }
-            if (d->object) {
-                d->object->deleteLater();
-                d->object = 0;
-                emit itemChanged();
-            }
-            emit statusChanged();
+            loadFromSourceComponent();
         }
-        emit activeChanged();
+    } else {
+        // cancel any current incubation
+        if (d->incubator) {
+            d->incubator->clear();
+            delete d->itemContext;
+            d->itemContext = 0;
+        }
+
+        if (d->item) {
+            QQuickItemPrivate *p = QQuickItemPrivate::get(d->item);
+            p->removeItemChangeListener(d, watchedChanges);
+
+            // We can't delete immediately because our item may have triggered
+            // the Loader to load a different item.
+            d->item->setParentItem(0);
+            d->item->setVisible(false);
+            d->item = 0;
+        }
+        if (d->object) {
+            d->object->deleteLater();
+            d->object = 0;
+            emit itemChanged();
+        }
+        emit statusChanged();
     }
+    emit activeChanged();
 }
 
 
@@ -886,15 +887,18 @@ void QQuickLoader::setAsynchronous(bool a)
 void QQuickLoaderPrivate::_q_updateSize(bool loaderGeometryChanged)
 {
     Q_Q(QQuickLoader);
-    if (!item || updatingSize)
+    if (!item)
         return;
-
-    updatingSize = true;
 
     if (loaderGeometryChanged && q->widthValid())
         item->setWidth(q->width());
     if (loaderGeometryChanged && q->heightValid())
         item->setHeight(q->height());
+
+    if (updatingSize)
+        return;
+
+    updatingSize = true;
 
     q->setImplicitSize(getImplicitWidth(), getImplicitHeight());
 

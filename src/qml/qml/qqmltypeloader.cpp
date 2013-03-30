@@ -124,6 +124,7 @@ public:
 public slots:
     void finished();
     void downloadProgress(qint64, qint64);
+    void manualFinished(QNetworkReply*);
 
 private:
     QQmlDataLoader *l;
@@ -181,6 +182,14 @@ void QQmlDataLoaderNetworkReplyProxy::downloadProgress(qint64 bytesReceived, qin
     Q_ASSERT(qobject_cast<QNetworkReply *>(sender()));
     QNetworkReply *reply = static_cast<QNetworkReply *>(sender());
     l->networkReplyProgress(reply, bytesReceived, bytesTotal);
+}
+
+// This function is for when you want to shortcut the signals and call directly
+void QQmlDataLoaderNetworkReplyProxy::manualFinished(QNetworkReply *reply)
+{
+    qint64 replySize = reply->size();
+    l->networkReplyProgress(reply, replySize, replySize);
+    l->networkReplyFinished(reply);
 }
 
 
@@ -1008,17 +1017,23 @@ void QQmlDataLoader::loadThread(QQmlDataBlob *blob)
     } else {
 
         QNetworkReply *reply = m_thread->networkAccessManager()->get(QNetworkRequest(blob->m_url));
-        QObject *nrp = m_thread->networkReplyProxy();
-        QObject::connect(reply, SIGNAL(downloadProgress(qint64,qint64)), 
-                         nrp, SLOT(downloadProgress(qint64,qint64)));
-        QObject::connect(reply, SIGNAL(finished()), 
-                         nrp, SLOT(finished()));
+        QQmlDataLoaderNetworkReplyProxy *nrp = m_thread->networkReplyProxy();
+        blob->addref();
         m_networkReplies.insert(reply, blob);
+
+        if (reply->isFinished()) {
+            nrp->manualFinished(reply);
+        } else {
+            QObject::connect(reply, SIGNAL(downloadProgress(qint64,qint64)),
+                             nrp, SLOT(downloadProgress(qint64,qint64)));
+            QObject::connect(reply, SIGNAL(finished()),
+                             nrp, SLOT(finished()));
+        }
+
 #ifdef DATABLOB_DEBUG
         qWarning("QQmlDataBlob: requested %s", qPrintable(blob->url().toString()));
 #endif
 
-        blob->addref();
     }
 }
 
@@ -1887,7 +1902,7 @@ QQmlTypeData::TypeDataCallback::~TypeDataCallback()
 QQmlTypeData::QQmlTypeData(const QUrl &url, QQmlTypeLoader::Options options, 
                                            QQmlTypeLoader *manager)
 : QQmlTypeLoader::Blob(url, QmlFile, manager), m_options(options),
-   m_typesResolved(false), m_compiledData(0), m_implicitImport(0)
+   m_typesResolved(false), m_compiledData(0), m_implicitImport(0), m_implicitImportLoaded(false)
 {
 }
 
@@ -1993,6 +2008,27 @@ void QQmlTypeData::completed()
     }
 }
 
+bool QQmlTypeData::loadImplicitImport()
+{
+    m_implicitImportLoaded = true; // Even if we hit an error, count as loaded (we'd just keep hitting the error)
+
+    m_imports.setBaseUrl(finalUrl(), finalUrlString());
+
+    QQmlImportDatabase *importDatabase = typeLoader()->importDatabase();
+    // For local urls, add an implicit import "." as most overridden lookup.
+    // This will also trigger the loading of the qmldir and the import of any native
+    // types from available plugins.
+    QList<QQmlError> implicitImportErrors;
+    m_imports.addImplicitImport(importDatabase, &implicitImportErrors);
+
+    if (!implicitImportErrors.isEmpty()) {
+        setError(implicitImportErrors);
+        return false;
+    }
+
+    return true;
+}
+
 void QQmlTypeData::dataReceived(const Data &data)
 {
     QString code = QString::fromUtf8(data.data(), data.size());
@@ -2007,30 +2043,21 @@ void QQmlTypeData::dataReceived(const Data &data)
 
     m_imports.setBaseUrl(finalUrl(), finalUrlString());
 
-    QQmlImportDatabase *importDatabase = typeLoader()->importDatabase();
-
-    // For local urls, add an implicit import "." as first (most overridden) lookup.
-    // This will also trigger the loading of the qmldir and the import of any native
-    // types from available plugins.
-    QList<QQmlError> implicitImportErrors;
-    m_imports.addImplicitImport(importDatabase, &implicitImportErrors);
-
-    if (!implicitImportErrors.isEmpty()) {
-        setError(implicitImportErrors);
-        return;
-    }
-
-    QList<QQmlError> errors;
-
+    // For remote URLs, we don't delay the loading of the implicit import
+    // because the loading probably requires an asynchronous fetch of the
+    // qmldir (so we can't load it just in time).
     if (!finalUrl().scheme().isEmpty()) {
         QUrl qmldirUrl = finalUrl().resolved(QUrl(QLatin1String("qmldir")));
         if (!QQmlImports::isLocal(qmldirUrl)) {
+            if (!loadImplicitImport())
+                return;
             // This qmldir is for the implicit import
             m_implicitImport = new QQmlScript::Import;
             m_implicitImport->uri = QLatin1String(".");
             m_implicitImport->qualifier = QString();
             m_implicitImport->majorVersion = -1;
             m_implicitImport->minorVersion = -1;
+            QList<QQmlError> errors;
 
             if (!fetchQmldir(qmldirUrl, m_implicitImport, 1, &errors)) {
                 setError(errors);
@@ -2038,6 +2065,8 @@ void QQmlTypeData::dataReceived(const Data &data)
             }
         }
     }
+
+    QList<QQmlError> errors;
 
     foreach (const QQmlScript::Import &import, scriptParser.imports()) {
         if (!addImport(import, &errors)) {
@@ -2135,13 +2164,26 @@ void QQmlTypeData::resolveTypes()
         TypeReference ref;
 
         QString url;
-        int majorVersion;
-        int minorVersion;
+        int majorVersion = -1;
+        int minorVersion = -1;
         QQmlImportNamespace *typeNamespace = 0;
         QList<QQmlError> errors;
 
-        if (!m_imports.resolveType(parserRef->name, &ref.type, &url, &majorVersion, &minorVersion,
-                                   &typeNamespace, &errors) || typeNamespace) {
+        bool typeFound = m_imports.resolveType(parserRef->name, &ref.type,
+                &majorVersion, &minorVersion, &typeNamespace, &errors);
+        if (!typeNamespace && !typeFound && !m_implicitImportLoaded) {
+            // Lazy loading of implicit import
+            if (loadImplicitImport()) {
+                // Try again to find the type
+                errors.clear();
+                typeFound = m_imports.resolveType(parserRef->name, &ref.type,
+                    &majorVersion, &minorVersion, &typeNamespace, &errors);
+            } else {
+                return; //loadImplicitImport() hit an error, and called setError already
+            }
+        }
+
+        if (!typeFound || typeNamespace) {
             // Known to not be a type:
             //  - known to be a namespace (Namespace {})
             //  - type with unknown namespace (UnknownNamespace.SomeType {})
@@ -2169,13 +2211,12 @@ void QQmlTypeData::resolveTypes()
             return;
         }
 
-        if (ref.type) {
-            ref.majorVersion = majorVersion;
-            ref.minorVersion = minorVersion;
-        } else {
-            ref.typeData = typeLoader()->getType(QUrl(url));
+        if (ref.type->isComposite()) {
+            ref.typeData = typeLoader()->getType(ref.type->sourceUrl());
             addDependency(ref.typeData);
         }
+        ref.majorVersion = majorVersion;
+        ref.minorVersion = minorVersion;
 
         Q_ASSERT(parserRef->firstUse);
         ref.location = parserRef->firstUse->location.start;

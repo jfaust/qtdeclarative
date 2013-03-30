@@ -1018,9 +1018,9 @@ void QQuickFlickablePrivate::handleMouseMoveEvent(QMouseEvent *event)
     if (q->yflick()) {
         qreal dy = event->localPos().y() - pressPos.y();
         bool overThreshold = QQuickWindowPrivate::dragOverThreshold(dy, Qt::YAxis, event);
-        if (vData.dragStartOffset == 0)
-            vData.dragStartOffset = dy;
         if (overThreshold || elapsedSincePress > 200) {
+            if (!vMoved)
+                vData.dragStartOffset = dy;
             qreal newY = dy + vData.pressPos - vData.dragStartOffset;
             // Recalculate bounds in case margins have changed, but use the content
             // size estimate taken at the start of the drag in case the drag causes
@@ -1052,9 +1052,9 @@ void QQuickFlickablePrivate::handleMouseMoveEvent(QMouseEvent *event)
     if (q->xflick()) {
         qreal dx = event->localPos().x() - pressPos.x();
         bool overThreshold = QQuickWindowPrivate::dragOverThreshold(dx, Qt::XAxis, event);
-        if (hData.dragStartOffset == 0)
-            hData.dragStartOffset = dx;
         if (overThreshold || elapsedSincePress > 200) {
+            if (!hMoved)
+                hData.dragStartOffset = dx;
             qreal newX = dx + hData.pressPos - hData.dragStartOffset;
             const qreal minX = hData.dragMinBound + hData.startMargin;
             const qreal maxX = hData.dragMaxBound - hData.endMargin;

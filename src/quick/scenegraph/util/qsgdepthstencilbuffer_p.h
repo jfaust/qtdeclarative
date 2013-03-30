@@ -3,7 +3,7 @@
 ** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
 ** Contact: http://www.qt-project.org/legal
 **
-** This file is part of the QtDeclarative module of the Qt Toolkit.
+** This file is part of the Qt Quick module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
@@ -47,8 +47,6 @@
 #include <QtGui/private/qopenglextensions_p.h>
 #include <QtCore/qsharedpointer.h>
 #include <QtCore/qhash.h>
-
-QT_BEGIN_HEADER
 
 QT_BEGIN_NAMESPACE
 
@@ -136,7 +134,5 @@ private:
 extern uint qHash(const QSGDepthStencilBuffer::Format &format);
 
 QT_END_NAMESPACE
-
-QT_END_HEADER
 
 #endif

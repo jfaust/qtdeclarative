@@ -46,10 +46,9 @@
 
 #include <QtGui/qtextoption.h>
 
-QT_BEGIN_HEADER
-
 QT_BEGIN_NAMESPACE
 
+class QQuickTextDocument;
 class QQuickTextEditPrivate;
 class Q_QUICK_PRIVATE_EXPORT QQuickTextEdit : public QQuickImplicitSizeItem
 {
@@ -91,6 +90,7 @@ class Q_QUICK_PRIVATE_EXPORT QQuickTextEdit : public QQuickImplicitSizeItem
 #ifndef QT_NO_IM
     Q_PROPERTY(Qt::InputMethodHints inputMethodHints READ inputMethodHints WRITE setInputMethodHints NOTIFY inputMethodHintsChanged)
 #endif
+    Q_PROPERTY(bool selectByKeyboard READ selectByKeyboard WRITE setSelectByKeyboard NOTIFY selectByKeyboardChanged REVISION 1)
     Q_PROPERTY(bool selectByMouse READ selectByMouse WRITE setSelectByMouse NOTIFY selectByMouseChanged)
     Q_PROPERTY(SelectionMode mouseSelectionMode READ mouseSelectionMode WRITE setMouseSelectionMode NOTIFY mouseSelectionModeChanged)
     Q_PROPERTY(bool canPaste READ canPaste NOTIFY canPasteChanged)
@@ -101,6 +101,7 @@ class Q_QUICK_PRIVATE_EXPORT QQuickTextEdit : public QQuickImplicitSizeItem
 #endif
     Q_PROPERTY(QUrl baseUrl READ baseUrl WRITE setBaseUrl RESET resetBaseUrl NOTIFY baseUrlChanged)
     Q_PROPERTY(RenderType renderType READ renderType WRITE setRenderType NOTIFY renderTypeChanged)
+    Q_PROPERTY(QQuickTextDocument *textDocument READ textDocument FINAL REVISION 1)
 
 public:
     QQuickTextEdit(QQuickItem *parent=0);
@@ -201,6 +202,9 @@ public:
     void setInputMethodHints(Qt::InputMethodHints hints);
 #endif
 
+    bool selectByKeyboard() const;
+    void setSelectByKeyboard(bool);
+
     bool selectByMouse() const;
     void setSelectByMouse(bool);
 
@@ -249,6 +253,8 @@ public:
     Q_INVOKABLE QString getText(int start, int end) const;
     Q_INVOKABLE QString getFormattedText(int start, int end) const;
 
+    QQuickTextDocument *textDocument();
+
 Q_SIGNALS:
     void textChanged();
     void contentSizeChanged();
@@ -272,6 +278,7 @@ Q_SIGNALS:
     void activeFocusOnPressChanged(bool activeFocusOnPressed);
     void persistentSelectionChanged(bool isPersistentSelection);
     void textMarginChanged(qreal textMargin);
+    Q_REVISION(1) void selectByKeyboardChanged(bool selectByKeyboard);
     void selectByMouseChanged(bool selectByMouse);
     void mouseSelectionModeChanged(SelectionMode mode);
     void linkActivated(const QString &link);
@@ -306,17 +313,19 @@ public Q_SLOTS:
 
 private Q_SLOTS:
     void q_textChanged();
-    void updateSelectionMarkers();
+    void q_contentsChange(int, int, int);
+    void updateSelection();
     void moveCursorDelegate();
     void createCursor();
     void q_canPasteChanged();
-    void updateDocument();
+    void updateWholeDocument();
     void updateCursor();
     void q_updateAlignment();
     void updateSize();
     void triggerPreprocess();
 
 private:
+    void markDirtyNodesForRange(int start, int end, int charDelta);
     void updateTotalLines();
 
 protected:
@@ -327,6 +336,7 @@ protected:
     void keyPressEvent(QKeyEvent *);
     void keyReleaseEvent(QKeyEvent *);
     void focusInEvent(QFocusEvent *event);
+    void focusOutEvent(QFocusEvent *event);
 
     // mouse filter?
     void mousePressEvent(QMouseEvent *event);
@@ -336,11 +346,10 @@ protected:
 #ifndef QT_NO_IM
     void inputMethodEvent(QInputMethodEvent *e);
 #endif
-    virtual void itemChange(ItemChange, const ItemChangeData &);
-
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *updatePaintNodeData);
 
     friend class QQuickTextUtil;
+    friend class QQuickTextDocument;
 
 private:
     Q_DISABLE_COPY(QQuickTextEdit)
@@ -350,7 +359,5 @@ private:
 QT_END_NAMESPACE
 
 QML_DECLARE_TYPE(QQuickTextEdit)
-
-QT_END_HEADER
 
 #endif // QQUICKTEXTEDIT_P_H
