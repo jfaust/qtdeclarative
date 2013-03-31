@@ -252,6 +252,12 @@ namespace QQmlPrivate
         // If this is extended ensure "version" is bumped!!!
     };
 
+#if _WIN32
+#pragma warning(push)
+#pragma warning(disable : 4510)
+#pragma warning(disable : 4610)
+#endif
+
     struct RegisterCompositeType {
         const QUrl &url;
         const char *uri;
@@ -259,6 +265,10 @@ namespace QQmlPrivate
         int versionMinor;
         const char *typeName;
     };
+
+#if _WIN32
+#pragma warning(pop)
+#endif
 
     enum RegistrationType {
         TypeRegistration       = 0,
