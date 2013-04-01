@@ -97,6 +97,7 @@ bool QQmlDirParser::parse(const QString &source)
     _plugins.clear();
     _components.clear();
     _scripts.clear();
+    _typeNamespace.clear();
 
     quint16 lineNumber = 0;
     bool firstLine = true;
