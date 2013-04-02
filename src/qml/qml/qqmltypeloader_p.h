@@ -561,19 +561,23 @@ private:
 public:
     const QString &content() const;
 
-    const QQmlScript::Import *import() const;
-    void setImport(const QQmlScript::Import *);
+    const QQmlScript::Import *import(QQmlTypeLoader::Blob *) const;
+    void setImport(QQmlTypeLoader::Blob *, const QQmlScript::Import *);
 
-    int priority() const;
-    void setPriority(int);
+    int priority(QQmlTypeLoader::Blob *) const;
+    void setPriority(QQmlTypeLoader::Blob *, int);
 
 protected:
     virtual void dataReceived(const Data &);
 
 private:
     QString m_content;
-    const QQmlScript::Import *m_import;
-    int m_priority;
+
+    // QQmlQmldirData may be shared between other script blobs, but they
+    // don't expect to share the import or priority, so store that for
+    // each of them
+    QMap<QQmlTypeLoader::Blob*, const QQmlScript::Import*> m_imports;
+    QMap<QQmlTypeLoader::Blob*, int> m_priorities;
 };
 
 QQmlDataBlob::Data::Data()
