@@ -3,7 +3,7 @@
 ** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
 ** Contact: http://www.qt-project.org/legal
 **
-** This file is part of the demonstration applications of the Qt Toolkit.
+** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
@@ -39,49 +39,22 @@
 **
 ****************************************************************************/
 
-#ifndef ETCPROVIDER_H
-#define ETCPROVIDER_H
+import QtQuick 2.0
 
-#include <qopengl.h>
-#include <QQuickImageProvider>
-#include <QtQuick/QSGTexture>
-#include <QUrl>
+//DO NOT CHANGE
 
-class EtcProvider : public QQuickImageProvider
-{
-public:
-    EtcProvider()
-        : QQuickImageProvider(QQuickImageProvider::Texture)
-    {}
+Item {
+    Component.onCompleted: {
+            var a = [1, 2]
+            var b = {a: "hello", d: 1 }
+            var c
+            var d = 12
+    }
+    function foo() {
+        var a = [1, 2]
+        var b = {a: "hello", d: 1 }
+        var c
+        var d = 12
+    }
+}
 
-    QQuickTextureFactory *requestTexture(const QString &id, QSize *size, const QSize &requestedSize);
-
-    void setBaseUrl(const QUrl &base);
-
-private:
-    QUrl m_baseUrl;
-};
-
-class EtcTexture : public QSGTexture
-{
-    Q_OBJECT
-public:
-    EtcTexture();
-    ~EtcTexture();
-
-    void bind();
-
-    QSize textureSize() const { return m_size; }
-    int textureId() const;
-
-    bool hasAlphaChannel() const { return false; }
-    bool hasMipmaps() const { return false; }
-
-    QByteArray m_data;
-    QSize m_size;
-    QSize m_paddedSize;
-    GLuint m_texture_id;
-    bool m_uploaded;
-};
-
-#endif // ETCPROVIDER_H
