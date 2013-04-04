@@ -252,7 +252,7 @@ namespace QQmlPrivate
         // If this is extended ensure "version" is bumped!!!
     };
 
-#if _WIN32
+#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable : 4510)
 #pragma warning(disable : 4610)
@@ -266,7 +266,7 @@ namespace QQmlPrivate
         const char *typeName;
     };
 
-#if _WIN32
+#ifdef _WIN32
 #pragma warning(pop)
 #endif
 
